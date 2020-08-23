@@ -1,70 +1,31 @@
 import React from "react";
-import "./App.css";
-import LightingDemo from "./lighting";
+import Molstar3D from "./g3ddemo";
 
 class App extends React.Component {
     myRef: any;
+    myRef2: any;
     constructor(props: any) {
         super(props);
-        this.myRef = React.createRef();
+        this.myRef2 = React.createRef();
     }
 
     componentDidMount() {
-        // const demo = new LightingDemo(this.myRef.current);
-        const demo = new LightingDemo("app");
-        // demo.init(this.myRef.current);
-        demo.load({ url: "https://files.rcsb.org/download/1M07.cif", assemblyId: "1" });
-
-        addHeader("Example PDB IDs");
-        addControl("1M07", () => demo.load({ url: "https://files.rcsb.org/download/1M07.cif", assemblyId: "1" }));
-        addControl("6HY0", () => demo.load({ url: "https://files.rcsb.org/download/6HY0.cif", assemblyId: "1" }));
-        addControl("6QVK", () => demo.load({ url: "https://files.rcsb.org/download/6QVK.cif", assemblyId: "1" }));
-        addControl("1RB8", () => demo.load({ url: "https://files.rcsb.org/download/1RB8.cif", assemblyId: "1" }));
-
-        addSeparator();
-
-        addHeader("Lighting Presets");
-        addControl("Illustrative", () => demo.setPreset("illustrative"));
-        addControl("Standard", () => demo.setPreset("standard"));
-        addControl("Ambient Occlusion", () => demo.setPreset("occlusion"));
-
-        ////////////////////////////////////////////////////////
-
-        function $(id: any) {
-            return document.getElementById(id);
-        }
-
-        function addControl(label: any, action: any) {
-            var btn = document.createElement("button");
-            btn.onclick = action;
-            btn.innerText = label;
-            const control = $("controls");
-            if (!control) return;
-            control.appendChild(btn);
-        }
-
-        function addSeparator() {
-            var hr = document.createElement("br");
-            const control = $("controls");
-            if (!control) return;
-            control.appendChild(hr);
-        }
-
-        function addHeader(header: any) {
-            var h = document.createElement("h3");
-            h.innerText = header;
-            const control = $("controls");
-            if (!control) return;
-            control.appendChild(h);
-        }
+        this.demoG3d();
     }
+
+    demoG3d = () => {
+        const demo = new Molstar3D(this.myRef2.current);
+        demo.init({ url: "https://target.wustl.edu/dli/tmp/test2.g3d" });
+    };
 
     render() {
         return (
-            <div className="App">
+            <div>
                 <p>mol* in React</p>
-                <div id="controls"></div>
-                <div id="app" ref={this.myRef}></div>
+                <div className="App">
+                    <div id="controls2"></div>
+                    <div id="app2" ref={this.myRef2}></div>
+                </div>
             </div>
         );
     }
