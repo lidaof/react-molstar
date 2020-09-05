@@ -17,6 +17,7 @@ import { StateTransforms } from "molstar/lib/mol-plugin-state/transforms";
 import { createStructureRepresentationParams } from "molstar/lib/mol-plugin-state/helpers/structure-representation-params";
 import { DataFormatProvider } from "molstar/lib/mol-plugin-state/formats/provider";
 import { stringToWords } from "molstar/lib/mol-util/string";
+import { PluginConfig } from "molstar/lib/mol-plugin/config";
 require("molstar/lib/mol-plugin-ui/skin/light.scss");
 
 const CustomFormats = [["g3d", G3dProvider] as const];
@@ -32,7 +33,8 @@ const DefaultViewerOptions = {
     layoutIsExpanded: false,
     layoutShowLeftPanel: true,
     layoutControlsDisplay: "reactive" as PluginLayoutControlsDisplay,
-    layoutShowSequence: true,
+    layoutShowSequence: false,
+    viewportShowExpand: false,
 };
 type ViewerOptions = typeof DefaultViewerOptions;
 type InitParams = {
@@ -47,6 +49,7 @@ class Molstar3D {
         const o = { ...DefaultViewerOptions, ...options };
         this.plugin = createPlugin(target, {
             ...DefaultPluginSpec,
+            actions: [],
             layout: {
                 initial: {
                     isExpanded: o.layoutIsExpanded,
@@ -63,6 +66,10 @@ class Molstar3D {
             },
             behaviors: [...DefaultPluginSpec.behaviors, ...o.extensions.map((e) => Extensions[e])],
             animations: [AnimateUnitsExplode],
+            config: [[PluginConfig.Viewport.ShowExpand, o.viewportShowExpand]],
+            components: {
+                remoteState: "none",
+            },
         });
     }
 
@@ -92,6 +99,7 @@ class Molstar3D {
                 color: "polymer-index",
                 size: "uniform",
                 sizeParams: { value: 0.25 },
+                // typeParams: { alpha: 0.51 },
             });
 
             for (const h of info.haplotypes) {

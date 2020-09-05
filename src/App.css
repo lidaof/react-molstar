@@ -3,60 +3,10 @@
     padding: 0;
     box-sizing: border-box;
 }
-#app {
-    position: absolute;
-    left: 160px;
-    top: 100px;
-    width: 600px;
-    height: 600px;
-    border: 1px solid #ccc;
-}
-
-#controls {
-    position: absolute;
-    width: 150px;
-    top: 100px;
-    left: 780px;
-}
-
-#app2 {
-    position: absolute;
-    left: 160px;
-    top: 100px;
-    width: 800px;
-    height: 600px;
-    border: 1px solid #ccc;
-}
-
-#controls2 {
-    position: absolute;
-    width: 150px;
-    top: 100px;
-    left: 780px;
-}
-
-#controls > button {
-    display: block;
-    width: 100%;
-    text-align: left;
-    margin: 5px 0px;
-}
-
-#controls > input,
-#controls > select {
-    width: 100%;
-    display: block;
-}
-
-#controls2 > button {
-    display: block;
-    width: 100%;
-    text-align: left;
-    margin: 5px 0px;
-}
-
-#controls2 > input,
-#controls2 > select {
-    width: 100%;
-    display: block;
+.App {
+    position: relative;
+    /* left: 0px; */
+    /* top: 50px; */
+    width: 100vw;
+    height: 100vh;
 }
