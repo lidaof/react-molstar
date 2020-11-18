@@ -12,16 +12,13 @@ import { PluginSpec } from "molstar/lib/mol-plugin/spec";
 import { ObjectKeys } from "molstar/lib/mol-util/type-helpers";
 import { PluginLayoutControlsDisplay } from "molstar/lib/mol-plugin/layout";
 import { G3DFormat, G3dProvider, G3DHeaderFromUrl, G3DTrajectory } from "molstar/lib/extensions/g3d/format";
-import { g3dHaplotypeQuery, G3dInfoDataProperty } from "molstar/lib/extensions/g3d/model";
+import { g3dHaplotypeQuery, G3dInfoDataProperty, g3dChromosomeQuery, g3dRegionQuery } from "molstar/lib/extensions/g3d/model";
 import { StateTransforms } from "molstar/lib/mol-plugin-state/transforms";
 import { createStructureRepresentationParams } from "molstar/lib/mol-plugin-state/helpers/structure-representation-params";
 import { DataFormatProvider } from "molstar/lib/mol-plugin-state/formats/provider";
 import { stringToWords } from "molstar/lib/mol-util/string";
 import { PluginConfig } from "molstar/lib/mol-plugin/config";
-import { Color } from "molstar/lib/mol-util/color";
-import { Queries, QueryContext, StructureSelection, Unit } from "molstar/lib/mol-model/structure";
-import { StateObjectSelector } from "molstar/lib/mol-state";
-import { EmptyLoci } from "molstar/lib/mol-model/loci";
+import { DecorateResiduesWithAnnotations } from './coloring';
 require("molstar/lib/mol-plugin-ui/skin/light.scss");
 
 const CustomFormats = [["g3d", G3dProvider] as const];
@@ -48,7 +45,10 @@ type InitParams = {
 
 class Molstar3D {
     plugin: PluginContext;
-    structure: StateObjectSelector | undefined;
+    components: any;
+    chromVisualSelector: any;
+    regionVisualSelector: any;
+
     constructor(target: HTMLElement, options: Partial<ViewerOptions> = {}) {
         const o = { ...DefaultViewerOptions, ...options };
         this.plugin = createPlugin(target, {
@@ -73,22 +73,17 @@ class Molstar3D {
             config: [[PluginConfig.Viewport.ShowExpand, o.viewportShowExpand]],
             components: {
                 remoteState: "none",
-                viewport: { canvas3d: { renderer: { pickingAlphaThreshold: 0.1, backgroundColor: Color(0xffffff) } } },
             },
         });
-        // PluginCommands.Canvas3D.SetSettings(this.plugin, {
-        //     settings: (props) => {
-        //         props.renderer.pickingAlphaThreshold = 0.1;
-        //     },
-        // });
-        // this.plugin.canvas3d?.setProps((props) => {
-        //     props.renderer.pickingAlphaThreshold = 0.1;
-        // });
+        this.components= null;
     }
 
     async init(params: InitParams) {
         return this.plugin.dataTransaction(async () => {
             this.plugin.behaviors.layout.leftPanelTabName.next("data");
+            this.plugin.representation.structure.themes.colorThemeRegistry.add(DecorateResiduesWithAnnotations.colorThemeProvider!);
+            this.plugin.managers.lociLabels.addProvider(DecorateResiduesWithAnnotations.labelProvider!);
+            this.plugin.customModelProperties.register(DecorateResiduesWithAnnotations.propertyProvider, true);
             const trajectory = await this.plugin
                 .build()
                 .toRoot()
@@ -101,72 +96,70 @@ class Molstar3D {
 
             if (!model) return;
             const structure = await builder.createStructure(model);
-            this.structure = structure;
+
             const info = G3dInfoDataProperty.get(model.data!);
             if (!info) return;
 
-            const components = this.plugin.build().to(structure);
+            this.components = this.plugin.build().to(structure);
 
             const repr = createStructureRepresentationParams(this.plugin, void 0, {
-                type: "cartoon",
-                color: "polymer-index",
-                size: "uniform",
+                type: 'cartoon',
+                color: 'polymer-index',
+                size: 'uniform',
                 sizeParams: { value: 0.25 },
-                // typeParams: { alpha: 0.25 },
+                typeParams: { alpha: 0.1 }
             });
-
+        
             for (const h of info.haplotypes) {
-                components
-                    .apply(StateTransforms.Model.StructureSelectionFromExpression, {
-                        expression: g3dHaplotypeQuery(h),
-                        label: stringToWords(h),
-                    })
+                this.components
+                    .apply(StateTransforms.Model.StructureSelectionFromExpression, { expression: g3dHaplotypeQuery(h), label: stringToWords(h) })
                     .apply(StateTransforms.Representation.StructureRepresentation3D, repr);
             }
-
-            await components.commit();
         });
     }
 
-    getInfo = (ctx: QueryContext) => {
-        if (Unit.isAtomic(ctx.element.unit)) return void 0;
-        return G3dInfoDataProperty.get(ctx.element.unit.model);
-    };
-
-    g3dRangeSelection = (haplotype: string, chromosome: string, start: number, end: number) => {
-        if (!this.structure) {
-            return;
-        }
-        const q = Queries.generators.atoms({
-            chainTest: (ctx) => {
-                const { seq_id_begin, asym_id } = ctx.element.unit.model.coarseHierarchy.spheres;
-                const seqId = seq_id_begin.value(ctx.element.element);
-                return (
-                    this.getInfo(ctx)?.haplotype[seqId] === haplotype &&
-                    asym_id.value(ctx.element.element) === chromosome
-                );
-            },
-            residueTest: (ctx) => {
-                const { seq_id_begin } = ctx.element.unit.model.coarseHierarchy.spheres;
-                const seqId = seq_id_begin.value(ctx.element.element);
-                const s = this.getInfo(ctx)?.start[seqId];
-                if (s === void 0) return false;
-                return start <= s && s < end;
-            },
+    showChrom3dStruct = (chrom: string) => {
+        // show struct of chromosome
+        const reprChrom = createStructureRepresentationParams(this.plugin, void 0, {
+            type: 'cartoon',
+            color: 'polymer-index',
+            size: 'uniform',
+            sizeParams: { value: 0.25 },
+            typeParams: { alpha: 0.2 }
         });
-        // const q = Queries.generators.all;
-        // structure is the selector from
-        // const structure = await builder.createStructure(model);
-        const sel = q(new QueryContext(this.structure!.data!));
-        const loci = StructureSelection.toLociWithSourceUnits(sel);
-        console.log(sel, loci);
-        this.plugin.managers.interactivity.lociHighlights.highlightOnly({ loci });
-    };
+        this.chromVisualSelector = this.components.apply(StateTransforms.Model.StructureSelectionFromExpression, { expression: g3dChromosomeQuery(chrom), label: chrom })
+            .apply(StateTransforms.Representation.StructureRepresentation3D, reprChrom).selector;
+    }
 
-    clearSelection = () => {
-        // to clear
-        this.plugin.managers.interactivity.lociHighlights.highlightOnly({ loci: EmptyLoci });
-    };
+    showRegion3dStruct = (chrom: string, start: number, end: number) => {
+        // show struct of a particular region
+        const reprRegion = createStructureRepresentationParams(this.plugin, void 0, {
+            type: 'cartoon',
+            color: 'polymer-index',
+            size: 'uniform',
+            sizeParams: { value: 0.25 },
+            typeParams: { alpha: 1 }
+        });
+        this.regionVisualSelector = this.components.apply(StateTransforms.Model.StructureSelectionFromExpression, { expression: g3dRegionQuery(chrom, start, end), label: `${chrom}:${start}-${end}` })
+            .apply(StateTransforms.Representation.StructureRepresentation3D, reprRegion).selector;
+    }
+
+    decorChrom3d = () => {
+        const colorTheme = { name: DecorateResiduesWithAnnotations.propertyProvider.descriptor.name, params: this.plugin.representation.structure.themes.colorThemeRegistry.get(DecorateResiduesWithAnnotations.propertyProvider.descriptor.name).defaultValues };
+        this.components.to(this.chromVisualSelector).update(StateTransforms.Representation.StructureRepresentation3D, (old:any) => ({ ...old, colorTheme }));
+            
+    }
+
+    decorRegion3d = () => {
+        console.log(DecorateResiduesWithAnnotations)
+        const colorTheme = { name: DecorateResiduesWithAnnotations.propertyProvider.descriptor.name, params: this.plugin.representation.structure.themes.colorThemeRegistry.get(DecorateResiduesWithAnnotations.propertyProvider.descriptor.name).defaultValues };
+        this.components.to(this.regionVisualSelector).update(StateTransforms.Representation.StructureRepresentation3D, (old:any) => ({ ...old, colorTheme }));
+            
+    }
+
+    final = async () => {
+        await this.components.commit();
+    }
 }
 
 export default Molstar3D;

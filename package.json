@@ -38,6 +38,6 @@
     ]
   },
   "devDependencies": {
-    "molstar": "^1.1.7"
+    "molstar": "^1.1.33"
   }
 }
