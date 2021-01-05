@@ -9,14 +9,16 @@ import { CustomElementProperty } from 'molstar/lib/mol-model-props/common/custom
 import { Model, ElementIndex } from 'molstar/lib/mol-model/structure';
 import { Color } from 'molstar/lib/mol-util/color';
 import { G3dInfoDataProperty } from 'molstar/lib/extensions/g3d/model';
+import { CustomProperty } from 'molstar/lib/mol-model-props/common/custom-property';
 
-export const DecorateResiduesWithAnnotations = CustomElementProperty.create<number>({
-    label: 'Decorate Residue With Annotations',
-    name: 'decorate-residue-with-annotations',
-    getData(model: Model) {
+export const CustomColoring = CustomElementProperty.create<number>({
+    label: 'Custom coloring',
+    name: 'custom-coloring',
+    async getData(model: Model, ctx: CustomProperty.Context) {
+        console.log(model, ctx)
         const map = new Map<ElementIndex, number>();
         const info = (G3dInfoDataProperty as any).get(model);
-        console.log(info);
+        console.log(info, ctx);
         for (let i = 0, _i = info.start.length; i < _i; i++) {
             map.set(i as ElementIndex, i % 2);
         }
@@ -27,6 +29,6 @@ export const DecorateResiduesWithAnnotations = CustomElementProperty.create<numb
         defaultColor: Color(0x777777)
     },
     getLabel(e) {
-        return e === 0 ? 'Compartment A' : 'Compartment B';
+        return e === 0 ? 'A' : 'B';
     }
 });
